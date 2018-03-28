@@ -1,0 +1,62 @@
+#!/bin/bash
+# --
+# Description : SSH wrapper to change VTE-based terminals' background color while
+#               connected to another host.
+# Author      : ptrxyz
+# Last change : 2018-03-28 
+# --
+
+# this should point to the real SSH client
+__SSH="/usr/bin/ssh"
+
+# Color be on.
+on() {
+  # get out of here if we are not VTE-based or going through a pipe
+  [[ -z "VTE_VERSION" ]] && return
+  [[ -p /dev/stdout ]] && return
+
+  # sophisticated background color selection happens here...
+  case "$1" in
+  work|mothership)
+    echo -ne "\033]11;#03253D\007"
+    ;;
+  *)
+    # Catch-all
+    echo -ne "\033]11;#3d032d\007"
+    ;;
+  esac
+}
+
+# Color be gone.
+off() {
+  [[ -z "VTE_VERSION" ]] && return
+  [[ -p /dev/stdout ]] && return
+
+  echo -ne "\033]111\007"
+}
+
+
+if [ -n "VTE_VERSION" ]; then
+  # Make sure we'll cleanly exit no matter what
+  trap off EXIT ERR INT TERM
+  
+  # skip ssh options to find hostname
+  # really, this is ugly. Any better way to do that?
+  while getopts ":1246AaCfgKkMNnqsTtVvXxYyb:c:D:E:e:F:I:i:J:L:l:m:O:o:p:Q:R:S:W:w:" Option; do
+    :
+  done
+  server=`eval echo "$"$OPTIND`
+
+  # reset $OPTIND so that subsequent invocations work properly
+  OPTIND=1;
+
+  server=$(echo $server | cut -d'@' -f2-)
+
+  [[ -n "$server" ]] && on "$server"
+fi
+
+$__SSH $@
+exit $?
+
+# vim: ai ts=2 sw=2 et sts=2 ft=sh
+# vim: autoindent tabstop=2 shiftwidth=2 expandtab softtabstop=2 filetype=sh
